@@ -6,3 +6,4 @@ redis
 psutil
 pytest
 pytest-cov
+pytest-mock
