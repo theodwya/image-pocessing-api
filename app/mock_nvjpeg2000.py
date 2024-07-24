@@ -11,6 +11,9 @@ class nvjpeg2kHandle:
 class nvjpeg2kDecodeState:
     pass
 
+class nvjpeg2kEncodeState:
+    pass
+
 class nvjpeg2kStream:
     pass
 
@@ -19,6 +22,9 @@ def nvjpeg2kCreate():
 
 def nvjpeg2kDecodeStateCreate(handle):
     return nvjpeg2kDecodeState()
+
+def nvjpeg2kEncodeStateCreate(handle):
+    return nvjpeg2kEncodeState()
 
 def nvjpeg2kStreamCreate(handle):
     return nvjpeg2kStream()
@@ -42,11 +48,11 @@ def nvjpeg2kEncode(handle, encode_state, stream, gpu_id):
 def nvjpeg2kDecodeStateDestroy(decode_state):
     pass
 
+def nvjpeg2kEncodeStateDestroy(encode_state):
+    pass
+
 def nvjpeg2kStreamDestroy(stream):
     pass
 
 def nvjpeg2kDestroy(handle):
-    pass
-
-def nvjpeg2kEncodeStateDestroy(encode_state):
     pass
