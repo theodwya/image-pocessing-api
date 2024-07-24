@@ -2,7 +2,12 @@
 Tests for the tasks module.
 """
 
-from app.tasks import decode_image, encode_image, create_slurm_script, submit_slurm_job
+from app.tasks import (
+    decode_image,
+    encode_image,
+    create_slurm_script,
+    submit_slurm_job
+)
 import os
 import time
 from unittest import mock
@@ -64,9 +69,13 @@ def test_submit_slurm_job():
     """
     Test the submit_slurm_job function.
     """
-    with mock.patch("subprocess.run", return_value=mock.Mock(stdout="Submitted batch job 12345\n")):
+    with mock.patch("subprocess.run",
+                    return_value=mock.Mock(
+                        stdout="Submitted batch job 12345\n")):
         script_path = "slurm_scripts/job_0.sh"
         priority = 0
 
-        job_id = submit_slurm_job(script_path, priority)
+        job_id = submit_slurm_job(
+            script_path, priority
+        )
         assert job_id == 12345

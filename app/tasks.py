@@ -1,7 +1,8 @@
 """
 Tasks Module
 
-This module defines the Celery tasks for processing image jobs using the nvJPEG2000 library.
+This module defines the Celery tasks for processing image jobs
+using the nvJPEG2000 library.
 """
 
 from celery import Celery
@@ -15,11 +16,13 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Conditionally import the actual or mock nvJPEG2000 library based on the environment variable
+# Conditionally import the actual or mock nvJPEG2000 library based on the
+# environment variable
 if os.getenv("USE_MOCK_NVJPEG2000", "true").lower() == "true":
     from .mock_nvjpeg2000 import *
 else:
-    import nvjpeg2000
+    # Remove the unused import statement
+    pass
 
 # Create a Celery instance for task management
 celery = Celery('tasks', broker='redis://redis:6379/0',
@@ -52,7 +55,11 @@ def process_image(input_image, output_image, operation, priority=0):
         end_time = time.time()
         duration = end_time - start_time
         logger.info(f"Image {operation} took {duration:.2f} seconds")
-        return f"Job submitted to Slurm with ID {slurm_job_id}. {operation.capitalize()} took {duration:.2f} seconds"
+        status_message = (
+            f"Job submitted to Slurm with ID {slurm_job_id}. "
+            f"{operation.capitalize()} took {duration:.2f} seconds"
+        )
+        return status_message
     except Exception as e:
         return str(e)
     finally:
@@ -103,8 +110,12 @@ def submit_slurm_job(script_path, priority):
     Returns:
         int: The Slurm job ID.
     """
-    result = subprocess.run(
-        ["sbatch", "--priority", str(priority), script_path], capture_output=True, text=True)
+    result = subprocess.run(["sbatch",
+                             "--priority",
+                             str(priority),
+                             script_path],
+                            capture_output=True,
+                            text=True)
     job_id = int(result.stdout.strip().split()[-1])
     return job_id
 
@@ -130,9 +141,17 @@ def decode_image(input_image, output_image, gpu_id):
                         image_data, len(image_data))
 
     image_info = nvjpeg2kStreamGetImageInfo(nvjpeg2k_stream)
-    width, height, num_components = image_info.width, image_info.height, image_info.num_components
+    width = image_info.width
+    height = image_info.height
+    num_components = image_info.num_components
     decoded_image = nvjpeg2kDecode(
-        nvjpeg2k_handle, nvjpeg2k_decode_state, nvjpeg2k_stream, width, height, num_components, gpu_id)
+        nvjpeg2k_handle,
+        nvjpeg2k_decode_state,
+        nvjpeg2k_stream,
+        width,
+        height,
+        num_components,
+        gpu_id)
 
     with open(output_image, 'wb') as f:
         f.write(decoded_image)
