@@ -1,0 +1,14 @@
+# Python
+*.pyc
+__pycache__/
+
+# Virtual environments
+venv/
+
+# Docker
+*.log
+docker-compose.override.yml
+
+# Test output
+output/
+coverage/

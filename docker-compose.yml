@@ -1,0 +1,48 @@
+# Docker Compose file version
+# This defines the version of the Docker Compose file format to use.
+version: '3.8'
+
+services:
+  web:
+    # Build the Docker image for the web service using the Dockerfile in the current directory.
+    build: .
+    # Expose port 8000 on the host and map it to port 8000 in the container.
+    ports:
+      - "8000:8000"
+    # Set environment variables for the web service.
+    environment:
+      # USE_MOCK_NVJPEG2000 is set to true to use the mock nvjpeg2000 library for local development.
+      - USE_MOCK_NVJPEG2000=true
+    # Define a dependency on the redis service. The web service will start after Redis is available.
+    depends_on:
+      - redis
+
+  worker:
+    # Build the Docker image for the Celery worker service using the Dockerfile in the current directory.
+    build: .
+    # Command to run the Celery worker. The -A option specifies the application (app.tasks), and --loglevel=info sets the logging level.
+    command: celery -A app.tasks worker --loglevel=info
+    # Set environment variables for the worker service.
+    environment:
+      # USE_MOCK_NVJPEG2000 is set to true to use the mock nvjpeg2000 library for local development.
+      - USE_MOCK_NVJPEG2000=true
+    # Define a dependency on the redis service. The worker service will start after Redis is available.
+    depends_on:
+      - redis
+
+  beat:
+    # Build the Docker image for the Celery beat service using the Dockerfile in the current directory.
+    build: .
+    # Command to run the Celery beat scheduler. The -A option specifies the application (app.tasks), and --loglevel=info sets the logging level.
+    command: celery -A app.tasks beat --loglevel=info
+    # Set environment variables for the beat service.
+    environment:
+      # USE_MOCK_NVJPEG2000 is set to true to use the mock nvjpeg2000 library for local development.
+      - USE_MOCK_NVJPEG2000=true
+    # Define a dependency on the redis service. The beat service will start after Redis is available.
+    depends_on:
+      - redis
+
+  redis:
+    # Use the official Redis image from Docker Hub.
+    image: "redis:alpine"

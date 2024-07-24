@@ -1,4 +1,4 @@
-# About GPU Image Processor
+# GPU Image Processor
 
 ## Overview
 
@@ -21,6 +21,7 @@
 - **nvJPEG2000**: NVIDIA library for accelerated JPEG2000 image decoding and encoding.
 - **Docker**: Containerization for consistent development and deployment environments.
 - **Python**: Programming language used for the core application logic.
+- **Pytest**: Testing framework for Python.
 
 ## Getting Started
 
@@ -46,18 +47,24 @@
        build: .
        ports:
          - "8000:8000"
+       environment:
+         - USE_MOCK_NVJPEG2000=true
        depends_on:
          - redis
 
      worker:
        build: .
        command: celery -A app.tasks worker --loglevel=info
+       environment:
+         - USE_MOCK_NVJPEG2000=true
        depends_on:
          - redis
 
      beat:
        build: .
        command: celery -A app.tasks beat --loglevel=info
+       environment:
+         - USE_MOCK_NVJPEG2000=true
        depends_on:
          - redis
 
@@ -126,6 +133,55 @@
    celery -A app.tasks beat --loglevel=info
    ```
 
+### Testing
+
+1. **Install Testing Requirements**:
+   Make sure `pytest` and `pytest-cov` are installed. They should be in your `requirements.txt`.
+
+2. **Run the Tests**:
+   ```bash
+   pytest --cov=app tests/
+   ```
+
+   This command will run all the tests in the `tests` directory and generate a coverage report for the `app` module.
+
+3. **Check Coverage**:
+   Ensure your tests cover at least 70% of the codebase.
+
+### Sample Files
+
+For testing, you can use sample JPEG 2000 files from the following sources:
+- [OpenJPEG samples](https://github.com/uclouvain/openjpeg-data)
+- [JPEG 2000 test images](https://openjpeg.org/samples)
+
+Place these sample files in the `test_images` directory.
+
+### Pre-commit Hooks
+
+1. **Install pre-commit**:
+   ```bash
+   pip install pre-commit
+   ```
+
+2. **Set Up pre-commit Hooks**:
+   Ensure you have a `.pre-commit-config.yaml` file set up:
+   ```yaml
+   repos:
+     - repo: https://github.com/psf/black
+       rev: 21.7b0
+       hooks:
+         - id: black
+     - repo: https://github.com/pycqa/flake8
+       rev: 3.9.2
+       hooks:
+         - id: flake8
+   ```
+
+3. **Install the Hooks**:
+   ```bash
+   pre-commit install
+   ```
+
 ### Contributing
 
 We welcome contributions from the community! To contribute, please follow these steps:
@@ -149,9 +205,18 @@ We welcome contributions from the community! To contribute, please follow these 
    ```
 6. **Create a Pull Request**: Go to the original repository and create a pull request from your fork.
 
----
 ### Contact
 
 If you have any questions or feedback, please feel free to reach out.
 
 ---
+
+### Summary of Changes:
+
+- Added sections for setting up and running tests.
+- Included information on installing and configuring pre-commit hooks.
+- Provided links to sources for sample JPEG 2000 files.
+- Detailed the usage of the `docker-compose.yml` file, including environment variable setup for using the mock library.
+- Ensured all necessary steps for local development and testing are clearly outlined.
+
+By following this updated README, users will have all the information they need to set up, run, and contribute to the GPU Image Processor project.
