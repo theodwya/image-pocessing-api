@@ -22,7 +22,9 @@ else:
     import nvjpeg2000
 
 # Create a Celery instance for task management
-celery = Celery('tasks', broker='redis://redis:6379/0', backend='redis://redis:6379/0')
+celery = Celery('tasks', broker='redis://redis:6379/0',
+                backend='redis://redis:6379/0')
+
 
 @celery.task
 def process_image(input_image, output_image, operation, priority=0):
@@ -34,7 +36,7 @@ def process_image(input_image, output_image, operation, priority=0):
         output_image (str): Path to the output image file.
         operation (str): Operation to perform ('decode' or 'encode').
         priority (int): Priority of the job (default is 0).
-    
+
     Returns:
         str: Status message.
     """
@@ -44,7 +46,8 @@ def process_image(input_image, output_image, operation, priority=0):
 
     try:
         start_time = time.time()
-        slurm_script = create_slurm_script(input_image, output_image, operation, gpu_id)
+        slurm_script = create_slurm_script(
+            input_image, output_image, operation, gpu_id)
         slurm_job_id = submit_slurm_job(slurm_script, priority)
         end_time = time.time()
         duration = end_time - start_time
@@ -55,6 +58,7 @@ def process_image(input_image, output_image, operation, priority=0):
     finally:
         gpu_manager.release_gpu(gpu_id)
 
+
 def create_slurm_script(input_image, output_image, operation, gpu_id):
     """
     Create a Slurm job script for image processing.
@@ -64,7 +68,7 @@ def create_slurm_script(input_image, output_image, operation, gpu_id):
         output_image (str): Path to the output image file.
         operation (str): Operation to perform ('decode' or 'encode').
         gpu_id (int): The ID of the GPU to use.
-    
+
     Returns:
         str: Path to the created Slurm job script.
     """
@@ -87,6 +91,7 @@ from app.tasks import {operation}_image;
         script_file.write(script_content)
     return script_path
 
+
 def submit_slurm_job(script_path, priority):
     """
     Submit a Slurm job using the provided script.
@@ -94,13 +99,15 @@ def submit_slurm_job(script_path, priority):
     Args:
         script_path (str): Path to the Slurm job script.
         priority (int): Priority of the job.
-    
+
     Returns:
         int: The Slurm job ID.
     """
-    result = subprocess.run(["sbatch", "--priority", str(priority), script_path], capture_output=True, text=True)
+    result = subprocess.run(
+        ["sbatch", "--priority", str(priority), script_path], capture_output=True, text=True)
     job_id = int(result.stdout.strip().split()[-1])
     return job_id
+
 
 def decode_image(input_image, output_image, gpu_id):
     """
@@ -119,11 +126,13 @@ def decode_image(input_image, output_image, gpu_id):
     with open(input_image, 'rb') as f:
         image_data = f.read()
 
-    nvjpeg2kStreamParse(nvjpeg2k_handle, nvjpeg2k_stream, image_data, len(image_data))
+    nvjpeg2kStreamParse(nvjpeg2k_handle, nvjpeg2k_stream,
+                        image_data, len(image_data))
 
     image_info = nvjpeg2kStreamGetImageInfo(nvjpeg2k_stream)
     width, height, num_components = image_info.width, image_info.height, image_info.num_components
-    decoded_image = nvjpeg2kDecode(nvjpeg2k_handle, nvjpeg2k_decode_state, nvjpeg2k_stream, width, height, num_components, gpu_id)
+    decoded_image = nvjpeg2kDecode(
+        nvjpeg2k_handle, nvjpeg2k_decode_state, nvjpeg2k_stream, width, height, num_components, gpu_id)
 
     with open(output_image, 'wb') as f:
         f.write(decoded_image)
@@ -134,6 +143,7 @@ def decode_image(input_image, output_image, gpu_id):
     end_time = time.time()
     duration = end_time - start_time
     logger.info(f"Decoding image {input_image} took {duration:.2f} seconds")
+
 
 def encode_image(input_image, output_image, gpu_id):
     """
@@ -152,9 +162,11 @@ def encode_image(input_image, output_image, gpu_id):
     with open(input_image, 'rb') as f:
         image_data = f.read()
 
-    nvjpeg2kStreamParse(nvjpeg2k_handle, nvjpeg2k_stream, image_data, len(image_data))
+    nvjpeg2kStreamParse(nvjpeg2k_handle, nvjpeg2k_stream,
+                        image_data, len(image_data))
 
-    encoded_image = nvjpeg2kEncode(nvjpeg2k_handle, nvjpeg2k_encode_state, nvjpeg2k_stream, gpu_id)
+    encoded_image = nvjpeg2kEncode(
+        nvjpeg2k_handle, nvjpeg2k_encode_state, nvjpeg2k_stream, gpu_id)
 
     with open(output_image, 'wb') as f:
         f.write(encoded_image)
@@ -166,6 +178,7 @@ def encode_image(input_image, output_image, gpu_id):
     duration = end_time - start_time
     logger.info(f"Encoding image {input_image} took {duration:.2f} seconds")
 
+
 @celery.on_after_configure.connect
 def setup_periodic_tasks(sender, **kwargs):
     """
@@ -176,6 +189,7 @@ def setup_periodic_tasks(sender, **kwargs):
         kwargs (dict): Additional arguments.
     """
     sender.add_periodic_task(crontab(minute='*/1'), check_gpu_status.s())
+
 
 @celery.task
 def check_gpu_status():

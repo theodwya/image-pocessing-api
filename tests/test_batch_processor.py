@@ -5,6 +5,7 @@ Tests for the batch_processor module.
 from app.batch_processor import process_batch
 import os
 
+
 def test_process_batch():
     """
     Test the process_batch function.

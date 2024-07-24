@@ -7,6 +7,7 @@ import os
 import time
 from unittest import mock
 
+
 def test_decode_image():
     """
     Test the decode_image function.
@@ -24,6 +25,7 @@ def test_decode_image():
     duration = end_time - start_time
     assert os.path.exists(output_image)
     assert duration > 0  # Ensure it took some time to process
+
 
 def test_encode_image():
     """
@@ -43,6 +45,7 @@ def test_encode_image():
     assert os.path.exists(output_image)
     assert duration > 0  # Ensure it took some time to process
 
+
 def test_create_slurm_script():
     """
     Test the create_slurm_script function.
@@ -52,8 +55,10 @@ def test_create_slurm_script():
     operation = "decode"
     gpu_id = 0
 
-    script_path = create_slurm_script(input_image, output_image, operation, gpu_id)
+    script_path = create_slurm_script(
+        input_image, output_image, operation, gpu_id)
     assert os.path.exists(script_path)
+
 
 def test_submit_slurm_job():
     """

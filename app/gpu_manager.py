@@ -9,6 +9,7 @@ import threading
 from time import sleep
 import psutil
 
+
 class GPUManager:
     """
     A class to manage GPU resources.
@@ -19,10 +20,11 @@ class GPUManager:
         available_gpus (list): A list of available GPU IDs.
         gpu_usage (list): A list to store the usage of each GPU.
     """
+
     def __init__(self, num_gpus):
         """
         Initialize the GPUManager with the number of GPUs.
-        
+
         Args:
             num_gpus (int): The total number of GPUs.
         """
@@ -34,7 +36,7 @@ class GPUManager:
     def allocate_gpu(self):
         """
         Allocate a GPU for a task.
-        
+
         Returns:
             int: The ID of the allocated GPU, or None if no GPU is available.
         """
@@ -46,7 +48,7 @@ class GPUManager:
     def release_gpu(self, gpu_id):
         """
         Release a GPU after a task is done.
-        
+
         Args:
             gpu_id (int): The ID of the GPU to release.
         """
@@ -62,6 +64,7 @@ class GPUManager:
                 # Simulated GPU usage monitoring
                 self.gpu_usage[gpu_id] = psutil.cpu_percent(interval=1)
             sleep(5)  # Monitor every 5 seconds
+
 
 # Create a singleton GPUManager instance
 gpu_manager = GPUManager(num_gpus=4)

@@ -9,14 +9,19 @@ from celery import Celery
 from .gpu_manager import gpu_manager
 import os
 
-# Conditionally import the actual or mock nvJPEG2000 library based on the environment variable
+# Conditionally import the actual or mock nvJPEG2000 library based on the
+# environment variable
 if os.getenv("USE_MOCK_NVJPEG2000", "true").lower() == "true":
     from .mock_nvjpeg2000 import *
 else:
     import nvjpeg2000
 
 # Create a Celery instance for batch processing
-celery = Celery('batch_processor', broker='redis://redis:6379/0', backend='redis://redis:6379/0')
+celery = Celery(
+    'batch_processor',
+    broker='redis://redis:6379/0',
+    backend='redis://redis:6379/0')
+
 
 @celery.task
 def process_batch(jobs):
@@ -25,7 +30,7 @@ def process_batch(jobs):
 
     Args:
         jobs (list): A list of job dictionaries, each containing 'input_image', 'output_image', and 'operation'.
-    
+
     Returns:
         list: A list of results for each job.
     """
@@ -48,6 +53,7 @@ def process_batch(jobs):
     finally:
         gpu_manager.release_gpu(gpu_id)
 
+
 def decode_image(input_image, output_image, gpu_id):
     """
     Decode a JPEG2000 image using the specified GPU.
@@ -64,11 +70,22 @@ def decode_image(input_image, output_image, gpu_id):
     with open(input_image, 'rb') as f:
         image_data = f.read()
 
-    nvjpeg2kStreamParse(nvjpeg2k_handle, nvjpeg2k_stream, image_data, len(image_data))
+    nvjpeg2kStreamParse(
+        nvjpeg2k_handle,
+        nvjpeg2k_stream,
+        image_data,
+        len(image_data))
 
     image_info = nvjpeg2kStreamGetImageInfo(nvjpeg2k_stream)
     width, height, num_components = image_info.width, image_info.height, image_info.num_components
-    decoded_image = nvjpeg2kDecode(nvjpeg2k_handle, nvjpeg2k_decode_state, nvjpeg2k_stream, width, height, num_components, gpu_id)
+    decoded_image = nvjpeg2kDecode(
+        nvjpeg2k_handle,
+        nvjpeg2k_decode_state,
+        nvjpeg2k_stream,
+        width,
+        height,
+        num_components,
+        gpu_id)
 
     with open(output_image, 'wb') as f:
         f.write(decoded_image)
@@ -76,6 +93,7 @@ def decode_image(input_image, output_image, gpu_id):
     nvjpeg2kDecodeStateDestroy(nvjpeg2k_decode_state)
     nvjpeg2kStreamDestroy(nvjpeg2k_stream)
     nvjpeg2kDestroy(nvjpeg2k_handle)
+
 
 def encode_image(input_image, output_image, gpu_id):
     """
@@ -93,9 +111,17 @@ def encode_image(input_image, output_image, gpu_id):
     with open(input_image, 'rb') as f:
         image_data = f.read()
 
-    nvjpeg2kStreamParse(nvjpeg2k_handle, nvjpeg2k_stream, image_data, len(image_data))
+    nvjpeg2kStreamParse(
+        nvjpeg2k_handle,
+        nvjpeg2k_stream,
+        image_data,
+        len(image_data))
 
-    encoded_image = nvjpeg2kEncode(nvjpeg2k_handle, nvjpeg2k_encode_state, nvjpeg2k_stream, gpu_id)
+    encoded_image = nvjpeg2kEncode(
+        nvjpeg2k_handle,
+        nvjpeg2k_encode_state,
+        nvjpeg2k_stream,
+        gpu_id)
 
     with open(output_image, 'wb') as f:
         f.write(encoded_image)

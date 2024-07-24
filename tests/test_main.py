@@ -7,6 +7,7 @@ from app.main import app
 
 client = TestClient(app)
 
+
 def test_read_root():
     """
     Test the root endpoint to ensure the application is running.
@@ -14,6 +15,7 @@ def test_read_root():
     response = client.get("/test/")
     assert response.status_code == 200
     assert response.json() == {"message": "Application is running correctly"}
+
 
 def test_submit_job():
     """
@@ -26,6 +28,7 @@ def test_submit_job():
     })
     assert response.status_code == 200
     assert response.json() == {"status": "Job submitted successfully"}
+
 
 def test_submit_batch():
     """
