@@ -8,6 +8,12 @@ from celery import Celery
 from .gpu_manager import gpu_manager
 import os
 import subprocess
+import time
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Conditionally import the actual or mock nvJPEG2000 library based on the environment variable
 if os.getenv("USE_MOCK_NVJPEG2000", "true").lower() == "true":
@@ -37,9 +43,13 @@ def process_image(input_image, output_image, operation, priority=0):
         return "No GPU available. Please try again later."
 
     try:
+        start_time = time.time()
         slurm_script = create_slurm_script(input_image, output_image, operation, gpu_id)
         slurm_job_id = submit_slurm_job(slurm_script, priority)
-        return f"Job submitted to Slurm with ID {slurm_job_id}"
+        end_time = time.time()
+        duration = end_time - start_time
+        logger.info(f"Image {operation} took {duration:.2f} seconds")
+        return f"Job submitted to Slurm with ID {slurm_job_id}. {operation.capitalize()} took {duration:.2f} seconds"
     except Exception as e:
         return str(e)
     finally:
@@ -101,6 +111,7 @@ def decode_image(input_image, output_image, gpu_id):
         output_image (str): Path to the output image file.
         gpu_id (int): The ID of the GPU to use.
     """
+    start_time = time.time()
     nvjpeg2k_handle = nvjpeg2kCreate()
     nvjpeg2k_decode_state = nvjpeg2kDecodeStateCreate(nvjpeg2k_handle)
     nvjpeg2k_stream = nvjpeg2kStreamCreate(nvjpeg2k_handle)
@@ -120,6 +131,9 @@ def decode_image(input_image, output_image, gpu_id):
     nvjpeg2kDecodeStateDestroy(nvjpeg2k_decode_state)
     nvjpeg2kStreamDestroy(nvjpeg2k_stream)
     nvjpeg2kDestroy(nvjpeg2k_handle)
+    end_time = time.time()
+    duration = end_time - start_time
+    logger.info(f"Decoding image {input_image} took {duration:.2f} seconds")
 
 def encode_image(input_image, output_image, gpu_id):
     """
@@ -130,6 +144,7 @@ def encode_image(input_image, output_image, gpu_id):
         output_image (str): Path to the output image file.
         gpu_id (int): The ID of the GPU to use.
     """
+    start_time = time.time()
     nvjpeg2k_handle = nvjpeg2kCreate()
     nvjpeg2k_encode_state = nvjpeg2kEncodeStateCreate(nvjpeg2k_handle)
     nvjpeg2k_stream = nvjpeg2kStreamCreate(nvjpeg2k_handle)
@@ -147,6 +162,9 @@ def encode_image(input_image, output_image, gpu_id):
     nvjpeg2kEncodeStateDestroy(nvjpeg2k_encode_state)
     nvjpeg2kStreamDestroy(nvjpeg2k_stream)
     nvjpeg2kDestroy(nvjpeg2k_handle)
+    end_time = time.time()
+    duration = end_time - start_time
+    logger.info(f"Encoding image {input_image} took {duration:.2f} seconds")
 
 @celery.on_after_configure.connect
 def setup_periodic_tasks(sender, **kwargs):
@@ -165,4 +183,4 @@ def check_gpu_status():
     Periodic task to check the status of GPU usage.
     """
     gpu_usage = gpu_manager.gpu_usage
-    print(f"GPU Usage: {gpu_usage}")
+    logger.info(f"GPU Usage: {gpu_usage}")
