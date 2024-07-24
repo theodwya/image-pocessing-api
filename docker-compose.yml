@@ -46,3 +46,15 @@ services:
   redis:
     # Use the official Redis image from Docker Hub.
     image: "redis:alpine"
+
+  test:
+    # Build the Docker image for the test service using the Dockerfile in the current directory.
+    build: .
+    # Command to run the tests with coverage reporting.
+    command: pytest --cov=app tests/
+    # Mount the current directory into the container at /app to allow access to the code and tests.
+    volumes:
+      - .:/app
+    # Define a dependency on the redis service. The test service will start after Redis is available.
+    depends_on:
+      - redis

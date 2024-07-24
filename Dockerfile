@@ -13,5 +13,5 @@ RUN pip install -r requirements.txt
 # Copy the entire application code into the container
 COPY . .
 
-# Command to run the FastAPI server
+# Command to run the FastAPI server by default
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

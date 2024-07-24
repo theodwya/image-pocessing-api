@@ -9,6 +9,35 @@ venv/
 *.log
 docker-compose.override.yml
 
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.cache
+pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# mypy
+.mypy_cache/
+
+# Pyre
+.pyre/
+
+# Cython debug symbols
+cython_debug/
+
 # Test output
 output/
 coverage/
+
+# VSCode settings
+.vscode/
+
+# GitHub Actions
+.github/
