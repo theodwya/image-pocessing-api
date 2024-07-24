@@ -7,6 +7,7 @@ This module defines the Celery tasks for processing image jobs using the nvJPEG2
 from celery import Celery
 from .gpu_manager import gpu_manager
 import os
+import subprocess
 
 # Conditionally import the actual or mock nvJPEG2000 library based on the environment variable
 if os.getenv("USE_MOCK_NVJPEG2000", "true").lower() == "true":
@@ -36,15 +37,60 @@ def process_image(input_image, output_image, operation, priority=0):
         return "No GPU available. Please try again later."
 
     try:
-        if operation == 'decode':
-            decode_image(input_image, output_image, gpu_id)
-        elif operation == 'encode':
-            encode_image(input_image, output_image, gpu_id)
-        return "Job completed successfully"
+        slurm_script = create_slurm_script(input_image, output_image, operation, gpu_id)
+        slurm_job_id = submit_slurm_job(slurm_script, priority)
+        return f"Job submitted to Slurm with ID {slurm_job_id}"
     except Exception as e:
         return str(e)
     finally:
         gpu_manager.release_gpu(gpu_id)
+
+def create_slurm_script(input_image, output_image, operation, gpu_id):
+    """
+    Create a Slurm job script for image processing.
+
+    Args:
+        input_image (str): Path to the input image file.
+        output_image (str): Path to the output image file.
+        operation (str): Operation to perform ('decode' or 'encode').
+        gpu_id (int): The ID of the GPU to use.
+    
+    Returns:
+        str: Path to the created Slurm job script.
+    """
+    script_content = f"""#!/bin/bash
+#SBATCH --gres=gpu:{gpu_id}
+#SBATCH --job-name=image_processing
+#SBATCH --output=slurm-%j.out
+
+module load cuda/10.1
+source activate myenv
+
+python -c "
+from app.tasks import {operation}_image;
+{operation}_image('{input_image}', '{output_image}', {gpu_id});
+"
+"""
+    script_path = f"slurm_scripts/job_{gpu_id}.sh"
+    os.makedirs(os.path.dirname(script_path), exist_ok=True)
+    with open(script_path, "w") as script_file:
+        script_file.write(script_content)
+    return script_path
+
+def submit_slurm_job(script_path, priority):
+    """
+    Submit a Slurm job using the provided script.
+
+    Args:
+        script_path (str): Path to the Slurm job script.
+        priority (int): Priority of the job.
+    
+    Returns:
+        int: The Slurm job ID.
+    """
+    result = subprocess.run(["sbatch", "--priority", str(priority), script_path], capture_output=True, text=True)
+    job_id = int(result.stdout.strip().split()[-1])
+    return job_id
 
 def decode_image(input_image, output_image, gpu_id):
     """
