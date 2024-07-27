@@ -1,92 +1,112 @@
 """
-Main Application Module
-
-This module sets up the FastAPI application and defines the API endpoints for job submission.
+Main module for FastAPI application.
 """
 
-from fastapi import FastAPI, BackgroundTasks
-from pydantic import BaseModel
+from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi.responses import FileResponse
 from .tasks import process_image
-from .batch_processor import process_batch
+import shutil
+import os
+import uuid
 
-# Create a FastAPI application instance
 app = FastAPI()
 
+# Ensure the upload and output directories exist
+os.makedirs("uploads", exist_ok=True)
+os.makedirs("output", exist_ok=True)
 
-class JobRequest(BaseModel):
+
+@app.post("/upload/")
+async def upload_file(file: UploadFile = File(...), operation: str = "decode"):
     """
-    Model for an individual job request.
-
-    Attributes:
-        input_image (str): Path to the input image file.
-        output_image (str): Path to the output image file.
-        operation (str): Operation to perform ('decode' or 'encode').
-        priority (int): Priority of the job (default is 0).
-    """
-    input_image: str
-    output_image: str
-    operation: str  # 'decode' or 'encode'
-    priority: int = 0  # Job priority
-
-
-class BatchJobRequest(BaseModel):
-    """
-    Model for a batch job request.
-
-    Attributes:
-        jobs (list): A list of JobRequest objects.
-    """
-    jobs: list[JobRequest]
-
-
-@app.post("/submit_job/")
-async def submit_job(job: JobRequest, background_tasks: BackgroundTasks):
-    """
-    Endpoint to submit an individual job.
+    Endpoint to upload an image file and process it.
 
     Args:
-        job (JobRequest): The job request data.
-        background_tasks (BackgroundTasks): Background tasks instance for running tasks asynchronously.
+        file (UploadFile): The uploaded image file.
+        operation (str): The operation to perform ('decode' or 'encode').
+
+    Returns:
+        dict: Status message and file information.
+    """
+    if operation not in ["decode", "encode"]:
+        raise HTTPException(status_code=400, detail="Invalid operation")
+
+    file_id = str(uuid.uuid4())
+    input_image_path = f"uploads/{file_id}_{file.filename}"
+    output_image_path = f"output/{file_id}_{file.filename}"
+
+    # Save the uploaded file
+    with open(input_image_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # Submit the image processing job
+    result = process_image.apply_async(
+        (input_image_path, output_image_path, operation))
+
+    return {"status": "File uploaded successfully", "task_id": result.id, "file_id": file_id}
+
+
+@app.get("/images/{file_id}")
+async def get_image(file_id: str):
+    """
+    Endpoint to retrieve an image file.
+
+    Args:
+        file_id (str): The ID of the file to retrieve.
+
+    Returns:
+        FileResponse: The requested image file.
+    """
+    file_path = f"output/{file_id}"
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+
+    return FileResponse(file_path)
+
+
+@app.put("/images/{file_id}")
+async def update_image(file_id: str, file: UploadFile = File(...)):
+    """
+    Endpoint to update an existing image file.
+
+    Args:
+        file_id (str): The ID of the file to update.
+        file (UploadFile): The new image file.
 
     Returns:
         dict: Status message.
     """
-    background_tasks.add_task(
-        process_image,
-        job.input_image,
-        job.output_image,
-        job.operation,
-        job.priority)
-    return {"status": "Job submitted successfully"}
+    input_image_path = f"uploads/{file_id}"
+    output_image_path = f"output/{file_id}"
+
+    # Save the new file
+    with open(input_image_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # Submit the image processing job
+    result = process_image.apply_async(
+        (input_image_path, output_image_path, "decode"))
+
+    return {"status": "File updated successfully", "task_id": result.id}
 
 
-@app.post("/submit_batch/")
-async def submit_batch(
-        batch_job: BatchJobRequest,
-        background_tasks: BackgroundTasks):
+@app.delete("/images/{file_id}")
+async def delete_image(file_id: str):
     """
-    Endpoint to submit a batch of jobs.
+    Endpoint to delete an image file.
 
     Args:
-        batch_job (BatchJobRequest): The batch job request data.
-        background_tasks (BackgroundTasks): Background tasks instance for running tasks asynchronously.
+        file_id (str): The ID of the file to delete.
 
     Returns:
         dict: Status message.
     """
-    jobs = [{"input_image": job.input_image,
-             "output_image": job.output_image,
-             "operation": job.operation} for job in batch_job.jobs]
-    background_tasks.add_task(process_batch, jobs)
-    return {"status": "Batch job submitted successfully"}
+    input_image_path = f"uploads/{file_id}"
+    output_image_path = f"output/{file_id}"
 
+    if os.path.exists(input_image_path):
+        os.remove(input_image_path)
+    if os.path.exists(output_image_path):
+        os.remove(output_image_path)
 
-@app.get("/test/")
-async def read_root():
-    """
-    A test endpoint to verify that the application is running correctly.
-
-    Returns:
-        dict: A simple message indicating the application is running.
-    """
-    return {"message": "Application is running correctly"}
+    return {"status": "File deleted successfully"}
